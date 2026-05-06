@@ -109,6 +109,18 @@ ${resultsText || '取得中...'}
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : '不明なエラー';
+    if (message.includes('429') || message.includes('quota') || message.includes('Too Many Requests')) {
+      return Response.json(
+        { error: 'APIの利用制限に達しました。しばらく待ってから再試行してください（無料枠: 15リクエスト/分）。' },
+        { status: 429 }
+      );
+    }
+    if (message.includes('API_KEY') || message.includes('401') || message.includes('403')) {
+      return Response.json(
+        { error: 'APIキーが無効です。Google AI Studio（aistudio.google.com）で取得した正しいキーを設定してください。' },
+        { status: 401 }
+      );
+    }
     return Response.json({ error: `AI生成エラー: ${message}` }, { status: 500 });
   }
 }
