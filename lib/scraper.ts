@@ -199,26 +199,29 @@ export async function fetchSchedule(): Promise<ScheduleGame[]> {
       const opponent = pkg.find('.bb-calendarTable__teamName').text().replace(/\s+/g, '').trim();
       if (!opponent) return;
 
-      // ホーム判定: リンク付きチーム名はビジター（ホームゲーム）、リンクなしはアウェー
-      const hasLink = pkg.find('.bb-calendarTable__teamName a').length > 0;
-      const isHome = hasLink;
+      // ホーム判定: .bb-calendarTable__data--home クラスがあればホームゲーム
+      // （リンクの有無は全試合で一定のため使用不可）
+      const isHome = $(el).hasClass('bb-calendarTable__data--home');
 
-      // 時刻
+      // 時刻・会場
       const fullText = pkg.text();
       const timeMatch = fullText.match(/(\d{1,2}:\d{2})/);
       const time = timeMatch?.[1];
 
-      // スコアと結果
+      // 会場: 「試合終了|試合前|試合中」の直後の単語
+      const venueMatch = fullText.match(/試合(?:終了|前|中)\s+(\S+)/);
+      const venue = venueMatch?.[1]?.trim() ?? (isHome ? '横浜' : opponent);
+
+      // スコアと結果（スコア表記は常に「ホームスコア - アウェースコア」）
       const scoreMatch = fullText.match(/(\d+)\s*[\-－]\s*(\d+)/);
       let result: 'win' | 'loss' | 'draw' | undefined;
       let score: { baystars: number; opponent: number } | undefined;
 
       if (scoreMatch) {
-        const a = parseInt(scoreMatch[1]);
-        const b = parseInt(scoreMatch[2]);
-        // ホームなら左がDeNA、アウェーなら右がDeNA（暫定）
-        const deNAScore = isHome ? a : b;
-        const oppScore = isHome ? b : a;
+        const homeScore = parseInt(scoreMatch[1]);
+        const awayScore = parseInt(scoreMatch[2]);
+        const deNAScore = isHome ? homeScore : awayScore;
+        const oppScore  = isHome ? awayScore  : homeScore;
         score = { baystars: deNAScore, opponent: oppScore };
         result = deNAScore > oppScore ? 'win' : deNAScore < oppScore ? 'loss' : 'draw';
       }
@@ -236,7 +239,7 @@ export async function fetchSchedule(): Promise<ScheduleGame[]> {
         year,
         opponent,
         isHome,
-        venue: isHome ? '横浜スタジアム' : `${opponent}主催`,
+        venue,
         time,
         result,
         score,
