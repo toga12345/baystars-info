@@ -68,7 +68,7 @@ const MOCK_PITCHERS: PitcherStats[] = [
 async function fetchHtml(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: HEADERS,
-    next: { revalidate: 1800 },
+    next: { revalidate: 600 },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const contentType = res.headers.get('content-type') ?? '';
@@ -282,19 +282,22 @@ export async function fetchPitcherStats(): Promise<PitcherStats[]> {
     const $ = cheerio.load(html);
     const stats: PitcherStats[] = [];
 
-    // カラム: 背番号|選手名|防御率|試合|勝利|敗北|セーブ|ホールド|...
+    // [0]背番号 [1]選手名 [2]防御率 [3]試合 [4]勝利 [5]敗北 [6]セーブ [7]ホールド ...
+    const toInt = (s: string): number => { const n = parseInt(s.trim(), 10); return isNaN(n) ? 0 : n; };
     $('table tbody tr').each((_, el) => {
       const cells = $(el).find('td');
-      if (cells.length < 7) return;
+      if (cells.length < 8) return;
+      const jerseyNo = $(cells[0]).text().trim();
+      if (!/^\d+$/.test(jerseyNo)) return; // ヘッダー混入行をスキップ
       const name = $(cells[1]).text().trim().replace(/\s+/g, '');
       if (!name) return;
       stats.push({
         name,
-        era: $(cells[2]).text().trim() || '0.00',  // 防御率
-        games: parseInt($(cells[3]).text()) || 0,  // 試合
-        wins: parseInt($(cells[4]).text()) || 0,   // 勝利
-        losses: parseInt($(cells[5]).text()) || 0, // 敗北
-        saves: parseInt($(cells[6]).text()) || 0,  // セーブ
+        era: $(cells[2]).text().trim() || '0.00',  // [2] 防御率
+        games: toInt($(cells[3]).text()),           // [3] 試合
+        wins: toInt($(cells[4]).text()),            // [4] 勝利
+        losses: toInt($(cells[5]).text()),          // [5] 敗北
+        saves: toInt($(cells[6]).text()),           // [6] セーブ
       });
     });
 
