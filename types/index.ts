@@ -36,6 +36,9 @@ export interface PitcherStats {
 
 export interface ScheduleGame {
   date: string;
+  day?: number;
+  month?: number;
+  year?: number;
   time?: string;
   opponent: string;
   isHome: boolean;

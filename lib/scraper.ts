@@ -26,9 +26,12 @@ const MOCK_RESULTS: GameResult[] = [
   { date: '4/30', opponent: '巨人', score: { baystars: 4, opponent: 2 }, result: 'win', isHome: true, venue: '横浜' },
 ];
 
+const now = new Date();
+const currentMonth = now.getMonth() + 1;
+
 const MOCK_TODAY: TodayGame = {
-  date: new Date().toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }),
-  opponent: '阪神',
+  date: `${currentMonth}/${now.getDate()}`,
+  opponent: '広島',
   isHome: true,
   venue: '横浜スタジアム',
   startTime: '18:00',
@@ -36,28 +39,28 @@ const MOCK_TODAY: TodayGame = {
 };
 
 const MOCK_SCHEDULE: ScheduleGame[] = [
-  { date: '5/6', time: '18:00', opponent: '阪神', isHome: true, venue: '横浜スタジアム' },
-  { date: '5/7', time: '18:00', opponent: '阪神', isHome: true, venue: '横浜スタジアム' },
-  { date: '5/8', time: '18:00', opponent: '阪神', isHome: true, venue: '横浜スタジアム' },
-  { date: '5/10', time: '14:00', opponent: 'ヤクルト', isHome: false, venue: '神宮' },
-  { date: '5/11', time: '14:00', opponent: 'ヤクルト', isHome: false, venue: '神宮' },
-  { date: '5/13', time: '18:00', opponent: '中日', isHome: true, venue: '横浜スタジアム' },
+  { date: '5/6', day: 6, month: 5, time: '18:00', opponent: '広島', isHome: true, venue: '横浜スタジアム' },
+  { date: '5/7', day: 7, month: 5, time: '18:00', opponent: '広島', isHome: true, venue: '横浜スタジアム' },
+  { date: '5/8', day: 8, month: 5, time: '18:00', opponent: '広島', isHome: true, venue: '横浜スタジアム' },
+  { date: '5/10', day: 10, month: 5, time: '14:00', opponent: 'ヤクルト', isHome: false, venue: '神宮' },
+  { date: '5/11', day: 11, month: 5, time: '14:00', opponent: 'ヤクルト', isHome: false, venue: '神宮' },
+  { date: '5/13', day: 13, month: 5, time: '18:00', opponent: '中日', isHome: true, venue: '横浜スタジアム' },
 ];
 
 const MOCK_BATTERS: BatterStats[] = [
+  { name: '佐野恵太', avg: '.270', hr: 4, rbi: 19, games: 31 },
+  { name: '度会隆輝', avg: '.290', hr: 3, rbi: 10, games: 29 },
+  { name: '山本祐大', avg: '.253', hr: 1, rbi: 8, games: 24 },
   { name: '牧秀悟', avg: '.315', hr: 8, rbi: 28, games: 38 },
   { name: '宮崎敏郎', avg: '.298', hr: 5, rbi: 22, games: 35 },
-  { name: '佐野恵太', avg: '.287', hr: 6, rbi: 25, games: 40 },
-  { name: '桑原将志', avg: '.275', hr: 3, rbi: 15, games: 38 },
-  { name: 'オースティン', avg: '.268', hr: 10, rbi: 30, games: 36 },
 ];
 
 const MOCK_PITCHERS: PitcherStats[] = [
-  { name: '東克樹', era: '2.15', wins: 5, losses: 2, saves: 0, games: 9 },
-  { name: '今永昇太', era: '2.48', wins: 4, losses: 3, saves: 0, games: 8 },
-  { name: 'バウアー', era: '3.12', wins: 4, losses: 2, saves: 0, games: 8 },
-  { name: '山崎康晃', era: '1.80', wins: 1, losses: 0, saves: 12, games: 18 },
+  { name: '東克樹', era: '1.89', wins: 3, losses: 2, saves: 0, games: 6 },
+  { name: '石田裕太郎', era: '2.45', wins: 2, losses: 3, saves: 0, games: 6 },
+  { name: '山崎康晃', era: '1.80', wins: 1, losses: 0, saves: 8, games: 15 },
   { name: '伊勢大夢', era: '2.35', wins: 2, losses: 1, saves: 5, games: 20 },
+  { name: 'バウアー', era: '3.12', wins: 4, losses: 2, saves: 0, games: 8 },
 ];
 
 // --- Fetch Helpers ---
@@ -68,7 +71,6 @@ async function fetchHtml(url: string): Promise<string> {
     next: { revalidate: 1800 },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  // Content-Type で Shift-JIS 等の場合も正しく扱う
   const contentType = res.headers.get('content-type') ?? '';
   const isShiftJis = /shift.jis|sjis/i.test(contentType);
   const isEucJp = /euc.jp/i.test(contentType);
@@ -87,13 +89,12 @@ export async function fetchStandings(): Promise<StandingsRow[]> {
     const $ = cheerio.load(html);
     const rows: StandingsRow[] = [];
 
-    // 順位表カラム: 順位|チーム|試合|勝|負|分|勝率|差
+    // カラム: 順位|チーム|試合|勝|負|分|勝率|差|...
     $('table').first().find('tbody tr').each((i, el) => {
       const cells = $(el).find('td');
       if (cells.length < 8) return;
       const rank = parseInt($(cells[0]).text().trim()) || i + 1;
       const team = $(cells[1]).text().trim();
-      // cells[2] = 試合数（スキップ）
       const wins = parseInt($(cells[3]).text().trim()) || 0;
       const losses = parseInt($(cells[4]).text().trim()) || 0;
       const draws = parseInt($(cells[5]).text().trim()) || 0;
@@ -111,39 +112,20 @@ export async function fetchStandings(): Promise<StandingsRow[]> {
 
 export async function fetchRecentResults(): Promise<GameResult[]> {
   try {
-    const html = await fetchHtml('https://baseball.yahoo.co.jp/npb/teams/25/schedule');
-    const $ = cheerio.load(html);
-    const results: GameResult[] = [];
-
-    $('table tr').each((_, el) => {
-      const cells = $(el).find('td');
-      if (cells.length < 5) return;
-      const dateText = $(cells[0]).text().trim();
-      const opponentText = $(cells[1]).text().trim().replace(/^[○●△@]/, '').trim();
-      const scoreText = $(cells[2]).text().trim();
-      const resultText = $(cells[0]).text().trim();
-
-      if (!dateText || !opponentText) return;
-
-      const scoreMatch = scoreText.match(/(\d+)-(\d+)/);
-      if (!scoreMatch) return;
-
-      const isWin = resultText.includes('○') || resultText.includes('勝');
-      const isLoss = resultText.includes('●') || resultText.includes('負');
-      const result: 'win' | 'loss' | 'draw' = isWin ? 'win' : isLoss ? 'loss' : 'draw';
-
-      results.push({
-        date: dateText,
-        opponent: opponentText || '未定',
-        score: { baystars: parseInt(scoreMatch[1]), opponent: parseInt(scoreMatch[2]) },
-        result,
-        isHome: !$(cells[1]).text().includes('@'),
-        venue: '横浜',
-      });
-    });
-
-    const finished = results.filter(r => r.score);
-    return finished.length > 0 ? finished.slice(0, 10) : MOCK_RESULTS;
+    // スケジュールから結果が確定している試合のみ取得
+    const schedule = await fetchSchedule();
+    const finished = schedule.filter(g => g.result !== undefined && g.score !== undefined);
+    if (finished.length >= 3) {
+      return finished.slice(-10).reverse().map(g => ({
+        date: g.date,
+        opponent: g.opponent,
+        score: g.score!,
+        result: g.result!,
+        isHome: g.isHome,
+        venue: g.venue,
+      }));
+    }
+    return MOCK_RESULTS;
   } catch {
     return MOCK_RESULTS;
   }
@@ -151,26 +133,43 @@ export async function fetchRecentResults(): Promise<GameResult[]> {
 
 export async function fetchTodayGame(): Promise<TodayGame> {
   try {
-    const today = new Date();
-    const dateStr = `${today.getMonth() + 1}/${today.getDate()}`;
+    // baystars.co.jp の og:title から今日の試合情報を取得
+    const html = await fetchHtml('https://www.baystars.co.jp/game/result');
+    const $ = cheerio.load(html);
+    const ogTitle = $('meta[property="og:title"]').attr('content') ?? '';
 
-    const schedule = await fetchSchedule();
-    const todayGame = schedule.find(g => g.date === dateStr);
+    // 例: "2026年5月6日(水) vs. 広島  セ・リーグ 公式戦  横浜"
+    const dateMatch = ogTitle.match(/(\d+)年(\d+)月(\d+)日/);
+    const vsMatch = ogTitle.match(/vs\.\s*(.+?)\s{2}/);
 
-    if (todayGame) {
+    if (dateMatch && vsMatch) {
+      const pageYear = parseInt(dateMatch[1]);
+      const pageMonth = parseInt(dateMatch[2]);
+      const pageDay = parseInt(dateMatch[3]);
+      const opponent = vsMatch[1].trim();
+
+      // 末尾のスペース区切り最後の要素が球場
+      const parts = ogTitle.split(/\s{2,}/);
+      const venue = parts[parts.length - 1]?.trim() ?? '';
+      const isHome = venue.includes('横浜') || venue.includes('ハマスタ');
+
+      const today = new Date();
+      const isToday =
+        pageYear === today.getFullYear() &&
+        pageMonth === today.getMonth() + 1 &&
+        pageDay === today.getDate();
+
       return {
-        date: todayGame.date,
-        opponent: todayGame.opponent,
-        isHome: todayGame.isHome,
-        venue: todayGame.venue,
-        startTime: todayGame.time,
-        result: todayGame.result,
-        score: todayGame.score,
-        isGameDay: true,
+        date: `${pageMonth}/${pageDay}`,
+        opponent,
+        isHome,
+        venue: venue || (isHome ? '横浜スタジアム' : ''),
+        startTime: undefined,
+        isGameDay: isToday,
       };
     }
 
-    return { ...MOCK_TODAY, isGameDay: false, date: dateStr };
+    return { ...MOCK_TODAY, isGameDay: false };
   } catch {
     return MOCK_TODAY;
   }
@@ -178,31 +177,69 @@ export async function fetchTodayGame(): Promise<TodayGame> {
 
 export async function fetchSchedule(): Promise<ScheduleGame[]> {
   try {
-    const html = await fetchHtml('https://baseball.yahoo.co.jp/npb/teams/25/schedule');
+    // Yahoo Sports Navi の DeNA スケジュールページ（カレンダー形式）
+    const html = await fetchHtml('https://baseball.yahoo.co.jp/npb/teams/3/schedule');
     const $ = cheerio.load(html);
     const games: ScheduleGame[] = [];
 
-    $('table tr').each((_, el) => {
-      const cells = $(el).find('td');
-      if (cells.length < 3) return;
+    const pageNow = new Date();
+    const month = pageNow.getMonth() + 1;
+    const year = pageNow.getFullYear();
 
-      const dateText = $(cells[0]).text().trim().split('(')[0];
-      const gameInfo = $(cells[1]).text().trim();
-      if (!dateText || !gameInfo) return;
+    $('.bb-calendarTable__data').each((_, el) => {
+      const pkg = $(el).find('.bb-calendarTable__package');
+      if (!pkg.length) return;
 
-      const isHome = !gameInfo.startsWith('@');
-      const opponent = gameInfo.replace(/^[@○●△\s]+/, '').trim().split(/\s/)[0];
-      const scoreMatch = $(cells[2]).text().match(/(\d+)-(\d+)/);
-      const resultChar = $(cells[0]).text();
+      const dayNum = parseInt(pkg.find('.bb-calendarTable__date').text().trim());
+      if (!dayNum) return;
+
+      // 試合なし
+      if (pkg.find('.bb-calendarTable__noGame').length > 0) return;
+
+      const opponent = pkg.find('.bb-calendarTable__teamName').text().replace(/\s+/g, '').trim();
+      if (!opponent) return;
+
+      // ホーム判定: リンク付きチーム名はビジター（ホームゲーム）、リンクなしはアウェー
+      const hasLink = pkg.find('.bb-calendarTable__teamName a').length > 0;
+      const isHome = hasLink;
+
+      // 時刻
+      const fullText = pkg.text();
+      const timeMatch = fullText.match(/(\d{1,2}:\d{2})/);
+      const time = timeMatch?.[1];
+
+      // スコアと結果
+      const scoreMatch = fullText.match(/(\d+)\s*[\-－]\s*(\d+)/);
+      let result: 'win' | 'loss' | 'draw' | undefined;
+      let score: { baystars: number; opponent: number } | undefined;
+
+      if (scoreMatch) {
+        const a = parseInt(scoreMatch[1]);
+        const b = parseInt(scoreMatch[2]);
+        // ホームなら左がDeNA、アウェーなら右がDeNA（暫定）
+        const deNAScore = isHome ? a : b;
+        const oppScore = isHome ? b : a;
+        score = { baystars: deNAScore, opponent: oppScore };
+        result = deNAScore > oppScore ? 'win' : deNAScore < oppScore ? 'loss' : 'draw';
+      }
+
+      // 「試合前」「試合中」が含まれる場合はスコアなし
+      if (fullText.includes('試合前') || fullText.includes('試合中')) {
+        score = undefined;
+        result = undefined;
+      }
 
       games.push({
-        date: dateText,
-        time: $(cells[3])?.text().trim() || undefined,
-        opponent: opponent || '未定',
+        date: `${month}/${dayNum}`,
+        day: dayNum,
+        month,
+        year,
+        opponent,
         isHome,
         venue: isHome ? '横浜スタジアム' : `${opponent}主催`,
-        result: resultChar.includes('○') ? 'win' : resultChar.includes('●') ? 'loss' : resultChar.includes('△') ? 'draw' : undefined,
-        score: scoreMatch ? { baystars: parseInt(scoreMatch[1]), opponent: parseInt(scoreMatch[2]) } : undefined,
+        time,
+        result,
+        score,
       });
     });
 
@@ -218,17 +255,18 @@ export async function fetchBatterStats(): Promise<BatterStats[]> {
     const $ = cheerio.load(html);
     const stats: BatterStats[] = [];
 
+    // カラム: 背番号|選手名|打率|試合|打席数|打数|安打|本塁打|打点|盗塁|...
     $('table tbody tr').each((_, el) => {
       const cells = $(el).find('td');
-      if (cells.length < 8) return;
-      const name = $(cells[1]).text().trim();
+      if (cells.length < 9) return;
+      const name = $(cells[1]).text().trim().replace(/\s+/g, '');
       if (!name) return;
       stats.push({
         name,
-        games: parseInt($(cells[2]).text()) || 0,
-        avg: $(cells[3]).text().trim() || '.000',
-        hr: parseInt($(cells[5]).text()) || 0,
-        rbi: parseInt($(cells[6]).text()) || 0,
+        avg: $(cells[2]).text().trim() || '.000',   // 打率
+        games: parseInt($(cells[3]).text()) || 0,   // 試合
+        hr: parseInt($(cells[7]).text()) || 0,      // 本塁打
+        rbi: parseInt($(cells[8]).text()) || 0,     // 打点
       });
     });
 
@@ -244,18 +282,19 @@ export async function fetchPitcherStats(): Promise<PitcherStats[]> {
     const $ = cheerio.load(html);
     const stats: PitcherStats[] = [];
 
+    // カラム: 背番号|選手名|防御率|試合|勝利|敗北|セーブ|ホールド|...
     $('table tbody tr').each((_, el) => {
       const cells = $(el).find('td');
-      if (cells.length < 8) return;
-      const name = $(cells[1]).text().trim();
+      if (cells.length < 7) return;
+      const name = $(cells[1]).text().trim().replace(/\s+/g, '');
       if (!name) return;
       stats.push({
         name,
-        games: parseInt($(cells[2]).text()) || 0,
-        era: $(cells[3]).text().trim() || '0.00',
-        wins: parseInt($(cells[4]).text()) || 0,
-        losses: parseInt($(cells[5]).text()) || 0,
-        saves: parseInt($(cells[6]).text()) || 0,
+        era: $(cells[2]).text().trim() || '0.00',  // 防御率
+        games: parseInt($(cells[3]).text()) || 0,  // 試合
+        wins: parseInt($(cells[4]).text()) || 0,   // 勝利
+        losses: parseInt($(cells[5]).text()) || 0, // 敗北
+        saves: parseInt($(cells[6]).text()) || 0,  // セーブ
       });
     });
 
