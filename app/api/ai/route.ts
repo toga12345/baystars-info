@@ -81,7 +81,7 @@ ${resultsText || '取得中...'}
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite-preview' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const result = await model.generateContentStream(systemPrompt);
 
@@ -109,9 +109,15 @@ ${resultsText || '取得中...'}
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : '不明なエラー';
+    if (message.includes('503') || message.includes('Service Unavailable') || message.includes('high demand')) {
+      return Response.json(
+        { error: 'AIサーバーが混雑しています。数分後に再試行してください。' },
+        { status: 503 }
+      );
+    }
     if (message.includes('429') || message.includes('quota') || message.includes('Too Many Requests')) {
       return Response.json(
-        { error: 'APIの利用制限に達しました。しばらく待ってから再試行してください（無料枠: 15リクエスト/分）。' },
+        { error: 'APIの利用制限に達しました。しばらく待ってから再試行してください（無料枠: 5リクエスト/分）。' },
         { status: 429 }
       );
     }
