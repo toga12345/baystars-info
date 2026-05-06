@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const data = type === 'pitcher' ? await fetchPitcherStats() : await fetchBatterStats();
     return Response.json(
       { data, type, updatedAt: new Date().toISOString() },
-      { headers: { 'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=7200' } }
+      { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' } }
     );
   } catch {
     return Response.json({ error: 'データ取得に失敗しました' }, { status: 500 });
