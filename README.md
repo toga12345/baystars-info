@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚾ ベイスターズINFO
 
-## Getting Started
+横浜DeNAベイスターズのリアルタイム情報・成績・AI展望を提供するファンWebアプリ
 
-First, run the development server:
+## 機能
+
+- **ホーム**: 今日の試合情報・直近成績・セ・リーグ順位表
+- **成績**: 打者・投手の成績一覧（タブ切り替え）
+- **スケジュール**: 月別試合スケジュール・結果
+- **AI展望**: Google Gemini AIによる試合展望・シーズン分析
+
+## セットアップ
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# 1. 依存パッケージインストール
+pnpm install
+
+# 2. 環境変数設定
+cp .env.local.example .env.local
+# .env.local を編集して GEMINI_API_KEY を設定
+
+# 3. 開発サーバー起動
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Gemini APIキーの取得（無料）
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. [Google AI Studio](https://aistudio.google.com/) にアクセス
+2. 「Get API key」をクリック
+3. 「Create API key」で新規生成
+4. `.env.local` の `GEMINI_API_KEY` に貼り付け
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**無料枠**: 15リクエスト/分、100万トークン/日
 
-## Learn More
+## デプロイ (Vercel)
 
-To learn more about Next.js, take a look at the following resources:
+1. このリポジトリをGitHubにpush
+2. [Vercel](https://vercel.com) でリポジトリを連携
+3. Environment Variables に以下を設定:
+   - `GEMINI_API_KEY`: GeminiのAPIキー
+   - `NEXT_PUBLIC_BASE_URL`: VercelのデプロイURL
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 技術スタック
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| 用途 | 技術 |
+|------|------|
+| フレームワーク | Next.js 16 (App Router) |
+| 言語 | TypeScript |
+| スタイリング | Tailwind CSS v4 + CSS Variables (Spindle準拠) |
+| スクレイピング | Cheerio |
+| AI | Google Gemini 1.5 Flash API |
+| ホスティング | Vercel (無料枠) |
+| CI/CD | GitHub Actions |
 
-## Deploy on Vercel
+## データソース
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- スポーツナビ プロ野球
+- プロ野球データFreak
+- NPB.jp 日本野球機構
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+※ 非公式ファンサイトです。

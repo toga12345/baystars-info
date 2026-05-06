@@ -1,26 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand Colors - BayStars */
+  --color-brand-primary: #002d72;
+  --color-brand-secondary: #0057a8;
+  --color-brand-accent: #c8102e;
+  --color-brand-light: #e8f0fb;
+
+  /* Surface */
+  --color-surface-default: #ffffff;
+  --color-surface-elevated: #f8f9fa;
+  --color-surface-overlay: #f0f4f8;
+
+  /* Text */
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #4a5568;
+  --color-text-disabled: #a0aec0;
+  --color-text-inverse: #ffffff;
+
+  /* Border */
+  --color-border-default: #e2e8f0;
+  --color-border-strong: #cbd5e0;
+
+  /* Status */
+  --color-status-win: #2f855a;
+  --color-status-win-bg: #f0fff4;
+  --color-status-loss: #c53030;
+  --color-status-loss-bg: #fff5f5;
+  --color-status-draw: #744210;
+  --color-status-draw-bg: #fffff0;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand-primary: var(--color-brand-primary);
+  --color-brand-secondary: var(--color-brand-secondary);
+  --color-brand-accent: var(--color-brand-accent);
+  --color-surface-default: var(--color-surface-default);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --font-sans: 'Noto Sans JP', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Noto Sans JP', sans-serif;
+  background-color: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
