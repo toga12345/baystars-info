@@ -1,12 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const AI_QUESTIONS = [
-  '今日の試合�E展望を教えて',
-  '今シーズンのベイスターズの展望は�E�E,
-  '現在の好調・不調選手�E�E�E,
-  '優勝�E可能性はどのくらぁE��E,
-  '最迁E試合�E振り返りを教えて',
-  '今年のキープレイヤーは誰�E�E,
+  '今日の試合の展望を教えて',
+  '今シーズンのベイスターズの展望は？',
+  '現在の好調・不調選手は？',
+  '優勝の可能性はどのくらい？',
+  '最近5試合の振り返りを教えて',
+  '今年のキープレイヤーは誰？',
 ];
 
 export async function POST(request: Request) {
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
   if (!apiKey) {
     return Response.json(
-      { error: 'AI機�Eを利用するにはGemini APIキーの設定が忁E��です、Eenv.localにGEMINI_API_KEYを設定してください、E },
+      { error: 'AI機能を利用するにはGemini APIキーの設定が必要です。.env.localにGEMINI_API_KEYを設定してください。' },
       { status: 503 }
     );
   }
@@ -24,13 +24,13 @@ export async function POST(request: Request) {
     const body = await request.json();
     question = body.question;
     if (!question || !AI_QUESTIONS.includes(question)) {
-      return Response.json({ error: '無効な質問でぁE }, { status: 400 });
+      return Response.json({ error: '無効な質問です' }, { status: 400 });
     }
   } catch {
     return Response.json({ error: 'リクエスト解析エラー' }, { status: 400 });
   }
 
-  // 最新チE�Eタを取得（�E部API呼び出し！E
+  // 最新データを取得（内部API呼び出し）
   let standingsText = '';
   let resultsText = '';
   try {
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     if (standingsRes.status === 'fulfilled' && standingsRes.value?.data) {
       standingsText = standingsRes.value.data
         .map((s: { rank: number; team: string; wins: number; losses: number; draws: number; winRate: number }) =>
-          `${s.rank}佁E${s.team} ${s.wins}勁E{s.losses}敁E{s.draws}刁E勝率${s.winRate}`
+          `${s.rank}位 ${s.team} ${s.wins}勝${s.losses}敗${s.draws}分 勝率${s.winRate}`
         )
         .join('\n');
     }
@@ -52,32 +52,32 @@ export async function POST(request: Request) {
       resultsText = resultsRes.value.data
         .slice(0, 5)
         .map((r: { date: string; opponent: string; result: string; score: { baystars: number; opponent: number } }) =>
-          `${r.date} vs ${r.opponent} ${r.result === 'win' ? '◁E : r.result === 'loss' ? '◁E : '△'} ${r.score.baystars}-${r.score.opponent}`
+          `${r.date} vs ${r.opponent} ${r.result === 'win' ? '○' : r.result === 'loss' ? '●' : '△'} ${r.score.baystars}-${r.score.opponent}`
         )
         .join('\n');
     }
   } catch {
-    // チE�Eタ取得失敗してめEI回答�E続衁E
+    // データ取得失敗してもAI回答は続行
   }
 
   const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const systemPrompt = `あなた�E横浜DeNAベイスターズの熱忁E��ファンかつ野球解説老E��す、E
-以下�E最新チE�Eタをもとに、ファンが聞きたぁE��報を日本語で詳しく、かつ熱のこもった解説をしてください、E
-チE�Eタが不完�Eな場合�E、一般皁E��野球知識とベイスターズの最近�E傾向をもとに回答してください、E
+  const systemPrompt = `あなたは横浜DeNAベイスターズの熱心なファンかつ野球解説者です。
+以下の最新データをもとに、ファンが聞きたい情報を日本語で詳しく、かつ熱のこもった解説をしてください。
+データが不完全な場合は、一般的な野球知識とベイスターズの最近の傾向をもとに回答してください。
 
-【今日の日付、E
+【今日の日付】
 ${today}
 
-【現在の頁E��（セ・リーグ�E�、E
+【現在の順位（セ・リーグ）】
 ${standingsText || '取得中...'}
 
-【直近�E試合結果�E�横浜DeNA�E�、E
+【直近の試合結果（横浜DeNA）】
 ${resultsText || '取得中...'}
 
-質啁E ${question}
+質問: ${question}
 
-回答�E300、E00斁E��程度で、�E体的なチE�EタめE��手名を交えながら解説してください。`;
+回答は300〜500文字程度で、具体的なデータや選手名を交えながら解説してください。`;
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -108,19 +108,19 @@ ${resultsText || '取得中...'}
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : '不�Eなエラー';
+    const message = err instanceof Error ? err.message : '不明なエラー';
     if (message.includes('429') || message.includes('quota') || message.includes('Too Many Requests')) {
       return Response.json(
-        { error: 'APIの利用制限に達しました。しばらく征E��てから再試行してください�E�無料枠: 15リクエスチE刁E��、E },
+        { error: 'APIの利用制限に達しました。しばらく待ってから再試行してください（無料枠: 15リクエスト/分）。' },
         { status: 429 }
       );
     }
     if (message.includes('API_KEY') || message.includes('401') || message.includes('403')) {
       return Response.json(
-        { error: 'APIキーが無効です、Eoogle AI Studio�E�Eistudio.google.com�E�で取得した正しいキーを設定してください、E },
+        { error: 'APIキーが無効です。Google AI Studio（aistudio.google.com）で取得した正しいキーを設定してください。' },
         { status: 401 }
       );
     }
-    return Response.json({ error: `AI生�Eエラー: ${message}` }, { status: 500 });
+    return Response.json({ error: `AI生成エラー: ${message}` }, { status: 500 });
   }
 }
